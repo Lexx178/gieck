@@ -78,7 +78,7 @@ _ip a
 
 /etc/shadow
 /etc/shadow-
-/opt/gieck/bin/gieck.log
+/opt/gieck/log/gieck.log
 ===
 
 3) **Файл скрипта синхронизации** - `sync`
@@ -98,7 +98,7 @@ _ip a
 3) **Файл скрипта управления логами** - `logger`
    - Локально: `/opt/gieck/bin/`
    - В GitHub: `Lexx178/gieck/bin/`
-   - Написан на Golang
+   - Написан на Bash
    - контролирует размер лога, если размер превышает лимит, оставляет только последние 70% записей.
 
 4) **Файл логов** - `gieck.log`
