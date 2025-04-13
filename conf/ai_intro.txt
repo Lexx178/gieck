@@ -6,7 +6,7 @@
 Система должна:
 - Считывать настройки из конфигурационного файла `gieck.conf`;
 - Работать по расписанию через systemd-timer (расписание задаётся в `gieck.conf` в формате cron) при установке программы;
-- Хранить конфигурации серверов в репозитории GitHub (lex/gieck/) - репозиторий указывается в конфигурационном файле, доступ происходит по ssh ключу репозитория;
+- Хранить конфигурации серверов в репозитории GitHub (Lexx178/gieck/) - репозиторий указывается в конфигурационном файле, доступ происходит по ssh ключу репозитория;
 - Синхронизировать файлы, каталоги и выводы команд, включая их структуру;
 - Логировать все действия в `gieck.log` с контролем размера файла логов - указывается в конфигурационном файле.;
 - Автоматически устанавливаться через `install`;
@@ -32,11 +32,13 @@
 
 Пример:
 - Локально: `/opt/gieck/localrep/sync/etc/fstab`, `/opt/gieck/localrep/cmd/nft list ruleset`, `/opt/gieck/localrep/sync/home/root/.ssh/`
-- В GitHub: `lex/gieck/sync/etc/fstab`, `lex/gieck/cmd/nft list ruleset`, `lex/gieck/sync/home/root/.ssh/`
+- В GitHub: `Lexx178/gieck/sync/etc/fstab`, `Lexx178/gieck/cmd/nft list ruleset`, `Lexx178/gieck/sync/home/root/.ssh/`
 
 **2b. Каталоги программы**
 `/opt/gieck/` - каталог программы
-`/opt/gieck/bin/` - каталог испольняемых файлов и настроек программы
+`/opt/gieck/bin/` - каталог испольняемых файлов
+`/opt/gieck/conf/` - каталог настроек программы
+`/opt/gieck/log/` - каталог логов программы
 `/opt/gieck/localrep/` - каталог локального репозитория
 `/opt/gieck/localrep/sync/` - каталог хранения копий файлов для сравнения контрольных сумм - синхронизируется с github
 `/opt/gieck/localrep/cmd/new/` - каталог хранения текущих результатов выполнения команд - не синхронизируется с github
@@ -46,8 +48,8 @@
 **3. Файлы программы**
 
 1) **Файл списка для синхронизации** - `название_сервера.sync`
-   - Локально: `/opt/gieck/bin/`
-   - В GitHub: `lex/gieck/bin/`
+   - Локально: `/opt/gieck/conf/`
+   - В GitHub: `Lexx178/gieck/conf/`
    - Содержит список файлов  каталогов для синхронизации.
    - Может содержать команды, начинающиеся с `_`.
    - Если файл отсутствует, создается копированием `template.sync`.
@@ -67,8 +69,8 @@ _ip a
 ===
 
 2) **Файл игнорирования** - `название_сервера.ignore`
-   - Локально: `/opt/gieck/bin/`
-   - В GitHub: `lex/gieck/bin/`
+   - Локально: `/opt/gieck/conf/`
+   - В GitHub: `Lexx178/gieck/conf/`
    - Определяет файлы, которые нужно исключить из синхронизации.
 
 ===
@@ -81,7 +83,8 @@ _ip a
 
 3) **Файл скрипта синхронизации** - `sync`
    - Локально: `/opt/gieck/bin/`
-   - В GitHub: `lex/gieck/bin/`
+   - В GitHub: `Lexx178/gieck/bin/`
+   - Написан на Golang
    - Проверяет блоки timer и update в концфигурации и при необходимости вносит изменения в таймеры systemd-timer
    - обрабатывает файлы, каталоги и команды из `название_сервера.sync`
    - убеждается что проверяемого файла нет в `название_сервера.ignore`
@@ -94,11 +97,12 @@ _ip a
 
 3) **Файл скрипта управления логами** - `logger`
    - Локально: `/opt/gieck/bin/`
-   - В GitHub: `lex/gieck/bin/`
+   - В GitHub: `Lexx178/gieck/bin/`
+   - Написан на Golang
    - контролирует размер лога, если размер превышает лимит, оставляет только последние 70% записей.
 
 4) **Файл логов** - `gieck.log`
-   - Локально: `/opt/gieck/bin/`
+   - Локально: `/opt/gieck/log/`
    - В GitHub: отсутствует.
    - Логирует все действия, на английском языке.
    - Все строки логов начинаются с уровня записи (OK, WARNING, ERROR).
@@ -121,57 +125,60 @@ _ip a
    ERROR:  CRITICAL ERROR, EXIT!!!
 ===
 
-5) **Файл установки программы** - `install`
+5) **Файл установки программы** - `install.sh`
    - Локально: `/opt/gieck/bin/`
-   - В GitHub: `lex/gieck/bin/`
+   - В GitHub: `Lexx178/gieck/bin/`
+   - Написан на Bash
    - Пользователь вручную загружает его с github и запускает.
+   - Скрипт скачивает остальные файлы программы с репозитория программы.
    - install после проверяет наличие конфигурационного файла, при необходимости скачивает его с github,
+   заменяет в gieck.conf {hostname} на имя сервера,
    выводит на экран его содержимое и дважды запрашивает подтверждение установки с этими настройками. (WARNING: ARE YOU SURE NEED TO INSTALL WITH THESE SETTINGS?)
    - Настраивает окружение пользователя.
    - Создает каталоги программы.
    - Задает права на каталог программы 0770
    - Настраивает systemd-timer
    - Проводит инициализацию репозитория синхронизации, git clone
-   - Скачивает остальные файлы программы с репозитория программы.
    - При отсутствии файлов sync и ignore в них копируется содержимое из template.sync и template.ignore.
    - В конце выводит предупреждение: "ATTENTION: Make sure that you have configured the SSH deployment key in GitHub and created a synchronization repository."
 
 6) **Файл шаблона списка синхронизации** - `template.sync`
-   - Локально: `/opt/gieck/bin/`
-   - В GitHub: `lex/gieck/bin/`
+   - Локально: `/opt/gieck/conf/`
+   - В GitHub: `Lexx178/gieck/conf/`
 
 ===
 #Пример template.sync:
 
 #/etc/
 #/opt/gieck/
-#/home/root/
+#/root/
 #_fdisk --list-details
 #_ip a
 #/var/spool/cron/crontabs/
 ===
 
 7) **Файл шаблона игнорирования** - `template.ignore`
-   - Локально: `/opt/gieck/bin/`
-   - В GitHub: `lex/gieck/bin/`
+   - Локально: `/opt/gieck/conf/`
+   - В GitHub: `Lexx178/gieck/conf/`
    
 ===
 #Пример template.ignore:
 
 #/etc/shadow
 #/etc/shadow-
-#/opt/gieck/bin/gieck.log
+#/opt/gieck/log/gieck.log
 ===
 
 8) **Файл обновления программы** - `update`
    - Локально: `/opt/gieck/bin/`
-   - В GitHub: `lex/gieck/bin/`
+   - В GitHub: `Lexx178/gieck/bin/`
+   - Написан на Bash.
    - Обновляет файлы программы (sync, logger, update, template.sync, template.ignore) с заменой с репозитория программы на GitHub.
 
 
 9) **Файл настроек** - `gieck.conf`
-   - Локально: `/opt/gieck/bin/`
-   - В GitHub: `lex/gieck/bin/`
+   - Локально: `/opt/gieck/conf/`
+   - В GitHub: `Lexx178/gieck/conf/`
    - Содержит: имя сервера, репозиторий, локальный каталог, параметры Telegram-бота, максимальный размер логов, расписание cron, время уведомлений.
 
 ===
@@ -179,26 +186,26 @@ _ip a
 # Комментарии в этом примере для удобства, в реальном файле их не будет.
 
 [install]											# Параметры инсталятора
-install_repo = git@github.com:lex/gieck.git				# Репозиторий программы
+install_repo = git@github.com:Lexx178/gieck.git			# Репозиторий программы
 hostname = debtests2									# Заполняется при установке именем сервера, также создается файл с `этим_значением.conf`. Имя берется из команды hostname.
 
 [main]												# Параметры основные
-sync_repo = git@github.com:gieck0/{hostname}.git		# Репозиторий синхронизации
+sync_repo = git@github.com:Lexx178/{hostname}.git		# Репозиторий синхронизации
 gieck_path = /opt/gieck/								# Путь к каталогу программы
-ssh_key = /opt/gieck/bin/{hostname}						# Путь к ключу для подключения к github
+ssh_key = /opt/gieck/conf/{hostname}					# Путь к ключу для подключения к github
 
 [logs]												# Параметры логов
 logs_max_size = 10M										# Максимальный размер логов
-logs_path = /opt/gieck/bin/gieck.log					# Путь к файлу логов
+logs_path = /opt/gieck/log/gieck.log					# Путь к файлу логов
 
 [sync]												# Параметры для синхронизации
 max_file_size = 1M										# Максимальный размер файла для синхронизации
 
 
 [timer]												# Параметры для systemd-timer
-sync = */5 * * * * {gieck_path}bin/sync					# Периодичность запуска синхронизации
-logger = 2 19 * * * {gieck_path}bin/logger   			# Периодичность запуска обработки логов
-update = 0 3 * * * {gieck_path}bin/update   			# Периодичность запуска обновлений
+sync = */5 * * * * /opt/gieck/bin/sync					# Периодичность запуска синхронизации
+logger = 2 19 * * * /opt/gieck/bin/logger   			# Периодичность запуска обработки логов
+update = 0 3 * * * /opt/gieck/bin/update   			# Периодичность запуска обновлений
 
 #Если update_enable = no то timer {gieck_path}bin/update деактивируется
 [update]											# Параметры для обновления

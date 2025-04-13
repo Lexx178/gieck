@@ -1,0 +1,6 @@
+#/etc/
+#/opt/gieck/
+#/root/
+#_fdisk --list-details
+#_ip a
+#/var/spool/cron/crontabs/
